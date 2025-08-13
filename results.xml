@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<report version="2.0">
+    <test name="E-commerce Test" duration="10" start="1678886400000" end="1678886410000">
+        <statistics>
+            <summary successCount="10" failureCount="2" throughput="1.0" avgResponseTime="500.5"/>
+            <transactions>
+                <transaction name="login" avgResponseTime="300" failureRate="0.0" p90="450"/>
+                <transaction name="view_products" avgResponseTime="690" failureRate="20.0" p90="900"/>
+                <transaction name="add_to_cart" avgResponseTime="1250" failureRate="10.0" p90="1800"/>
+            </transactions>
+            <errors>
+                <error code="500" count="1" message="Internal Server Error"/>
+                <error code="404" count="1" message="Not Found"/>
+            </errors>
+        </statistics>
+    </test>
+</report>

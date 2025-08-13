@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Performance Test Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      /* Light theme (default) */
+      --bg: #f8fafc;
+      --bg-grad1: rgba(34,211,238,0.08);
+      --bg-grad2: rgba(167,139,250,0.06);
+      --panel: #ffffff;
+      --panel-border: rgba(0,0,0,0.08);
+      --card: #ffffff;
+      --muted: #4b5563;
+      --text: #0f172a;
+      --accent: #0ea5e9; /* cyan-500-ish for light */
+      --accent-2: #7c3aed; /* violet-600 */
+      --success: #16a34a; /* green-600 */
+      --danger: #dc2626;
+      --table-header-bg: rgba(0,0,0,0.04);
+    }
+
+    body.dark-mode {
+      /* Dark theme overrides */
+      --bg: #0f172a;
+      --bg-grad1: rgba(34,211,238,0.12);
+      --bg-grad2: rgba(167,139,250,0.10);
+      --panel: rgba(255,255,255,0.06);
+      --panel-border: rgba(255,255,255,0.08);
+      --card: #0b1220;
+      --muted: #9ca3af;
+      --text: #f3f4f6;
+      --accent: #22d3ee; /* cyan-300 */
+      --accent-2: #a78bfa; /* violet-300 */
+      --success: #22c55e; /* green-500 */
+      --danger: #ef4444;
+      --table-header-bg: rgba(255,255,255,0.06);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 0; font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(1200px 700px at 10% -10%, var(--bg-grad1), transparent 40%),
+                  radial-gradient(800px 500px at 90% -20%, var(--bg-grad2), transparent 50%), var(--bg);
+      color: var(--text);
+    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    h1 { font-size: 22px; margin: 0; letter-spacing: 0.3px; }
+    .panel { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 14px; padding: 16px; backdrop-filter: blur(8px); }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .controls { display: flex; gap: 10px; align-items: center; }
+    input[type="file"] { color: var(--muted); }
+    button { appearance: none; border: none; padding: 10px 14px; border-radius: 10px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); color: #06131a; font-weight: 700; cursor: pointer; box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 30%, transparent); }
+    button.secondary { background: var(--panel); color: var(--text); border: 1px solid var(--panel-border); box-shadow: none; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .metric { background: var(--card); border: 1px solid var(--panel-border); border-radius: 12px; padding: 12px; }
+    .metric .label { color: var(--muted); font-size: 12px; }
+    .metric .value { font-size: 18px; font-weight: 700; margin-top: 4px; }
+    .status { color: var(--muted); font-size: 12px; margin-top: 6px; min-height: 18px; }
+    canvas { width: 100% !important; height: 340px !important; }
+    @media (max-width: 900px) { .row { grid-template-columns: 1fr; } .metrics { grid-template-columns: repeat(2, 1fr); } }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; color: var(--text); font-size: 12px; }
+    th, td { padding: 8px 10px; border-bottom: 1px solid var(--panel-border); text-align: left; }
+    th { background: var(--table-header-bg); position: sticky; top: 0; }
+
+    /* Theme toggle switch */
+    .theme-switch { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--panel-border); border-radius: 999px; background: var(--panel); }
+    .theme-switch input { width: 0; height: 0; opacity: 0; position: absolute; }
+    .switch-visual { width: 42px; height: 24px; background: var(--panel-border); border-radius: 999px; position: relative; transition: background 0.2s ease; }
+    .switch-visual::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: var(--text); border-radius: 50%; transition: transform 0.25s ease; }
+    #theme-toggle:checked + .switch-visual { background: var(--accent-2); }
+    #theme-toggle:checked + .switch-visual::after { transform: translateX(18px); background: #fff; }
+    .theme-label { color: var(--muted); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>AI-Powered Performance Test Dashboard</h1>
+      <div class="controls panel">
+        <label class="theme-switch" title="Toggle dark mode">
+          <input id="theme-toggle" type="checkbox" aria-label="Toggle dark mode" />
+          <span class="switch-visual"></span>
+          <span class="theme-label">Dark</span>
+        </label>
+        <input id="fileInput" type="file" accept=".csv,.json,.xml" />
+        <button id="btnAnalyze">Upload and Analyze</button>
+        <button id="btnDownload" class="secondary" disabled>Download Report</button>
+      </div>
+    </header>
+
+    <section class="panel" style="margin-bottom:16px;">
+      <div class="metrics" id="metrics"></div>
+      <div class="status" id="status"></div>
+    </section>
+
+    <section class="row">
+      <div class="panel">
+        <h3 style="margin-top:0;">Latency over Time</h3>
+        <canvas id="latencyChart"></canvas>
+      </div>
+      <div class="panel">
+        <h3 style="margin-top:0;">Top 10 Slowest Requests</h3>
+        <canvas id="top10Chart"></canvas>
+      </div>
+    </section>
+
+    <section class="row" style="margin-top:16px;">
+      <div class="panel">
+        <h3 style="margin-top:0;">Error Distribution by Endpoint</h3>
+        <canvas id="errorPieChart"></canvas>
+      </div>
+      <div class="panel">
+        <h3 style="margin-top:0;">Latency Distribution Histogram</h3>
+        <canvas id="latencyHistChart"></canvas>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-top:16px;">
+      <h3 style="margin-top:0;">Throughput Over Time</h3>
+      <canvas id="throughputChart"></canvas>
+    </section>
+
+    <section class="panel" style="margin-top:16px;">
+      <h3 style="margin-top:0;">Per-Endpoint Metrics</h3>
+      <div class="table-wrap">
+        <table id="endpointTable">
+          <thead>
+            <tr>
+              <th>Endpoint</th>
+              <th>Count</th>
+              <th>Errors</th>
+              <th>Avg (ms)</th>
+              <th>50th percentile</th>
+              <th>90th percentile</th>
+              <th>95th percentile</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const apiBase = window.location.origin; // same origin by default
+    const fileInput = document.getElementById('fileInput');
+    const btnAnalyze = document.getElementById('btnAnalyze');
+    const btnDownload = document.getElementById('btnDownload');
+    const statusEl = document.getElementById('status');
+    const metricsEl = document.getElementById('metrics');
+    const themeToggle = document.getElementById('theme-toggle');
+
+    const THEME_KEY = 'dashboardTheme'; // 'dark' | 'light'
+
+    function hexToRgba(hex, alpha) {
+      const normalized = hex.replace('#','');
+      const bigint = parseInt(normalized.length === 3 ? normalized.split('').map(c=>c+c).join('') : normalized, 16);
+      const r = (bigint >> 16) & 255;
+      const g = (bigint >> 8) & 255;
+      const b = bigint & 255;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function getThemeColors() {
+      const styles = getComputedStyle(document.body);
+      const text = styles.getPropertyValue('--text').trim();
+      const muted = styles.getPropertyValue('--muted').trim();
+      const accent = styles.getPropertyValue('--accent').trim();
+      const accent2 = styles.getPropertyValue('--accent-2').trim();
+      const success = styles.getPropertyValue('--success').trim();
+      return {
+        text,
+        muted,
+        accent,
+        accent2,
+        success,
+        accentBg: hexToRgba(accent, 0.25),
+        successBg: hexToRgba(success, 0.25)
+      };
+    }
+
+    function applyTheme(theme) {
+      const isDark = theme === 'dark';
+      document.body.classList.toggle('dark-mode', isDark);
+      localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+      if (themeToggle) themeToggle.checked = isDark;
+      // Re-render charts with new colors
+      if (lastPayload && lastPayload.charts) {
+        renderCharts(lastPayload.charts, lastPayload.analysis || {});
+      }
+    }
+
+    function initTheme() {
+      const saved = localStorage.getItem(THEME_KEY);
+      if (saved === 'dark' || saved === 'light') {
+        applyTheme(saved);
+        return;
+      }
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      applyTheme(prefersDark ? 'dark' : 'light');
+    }
+
+    if (themeToggle) {
+      themeToggle.addEventListener('change', () => {
+        applyTheme(themeToggle.checked ? 'dark' : 'light');
+      });
+    }
+
+    let lastUploadedFile = null;
+    let lastPayload = null;
+    let latencyChart, top10Chart, errorPieChart, latencyHistChart, throughputChart;
+
+    function setStatus(msg, isError=false) {
+      statusEl.textContent = msg || '';
+      statusEl.style.color = isError ? 'var(--danger)' : 'var(--muted)';
+    }
+
+    function formatNumber(n, digits=2) {
+      if (n === null || n === undefined || Number.isNaN(n)) return '-';
+      return Number(n).toLocaleString(undefined, { maximumFractionDigits: digits });
+    }
+
+    function renderMetrics(m) {
+      const tpl = (label, value) => `<div class="metric"><div class="label">${label}</div><div class="value">${value}</div></div>`;
+      metricsEl.innerHTML = [
+        tpl('Total Requests', formatNumber(m.total_requests, 0)),
+        tpl('Successes', formatNumber(m.total_successes, 0)),
+        tpl('Errors', formatNumber(m.total_errors, 0)),
+        tpl('Error Rate %', formatNumber(m.error_rate_pct)),
+        tpl('Throughput (req/s)', formatNumber(m.throughput_rps)),
+        tpl('Overall Throughput (req/s)', formatNumber(m.overall_throughput_rps)),
+        tpl('Avg Latency (ms)', formatNumber(m.average_latency_ms)),
+        // Updated percentile labels displayed in milliseconds
+        tpl('50th Percentile', `${formatNumber(m.median_latency_ms)} ms`),
+        tpl('90th Percentile', `${formatNumber(m.p90_latency_ms)} ms`),
+        tpl('95th Percentile', `${formatNumber(m.p95_latency_ms)} ms`),
+      ].join('');
+    }
+
+    function ensureChart(key, ctxId, cfgBuilder) {
+      if (key === 'latency' && latencyChart) { latencyChart.destroy(); }
+      if (key === 'top10' && top10Chart) { top10Chart.destroy(); }
+      if (key === 'errorPie' && errorPieChart) { errorPieChart.destroy(); }
+      if (key === 'latHist' && latencyHistChart) { latencyHistChart.destroy(); }
+      if (key === 'throughput' && throughputChart) { throughputChart.destroy(); }
+      const canvas = document.getElementById(ctxId);
+      const chart = new Chart(canvas.getContext('2d'), cfgBuilder());
+      if (key === 'latency') latencyChart = chart;
+      else if (key === 'top10') top10Chart = chart;
+      else if (key === 'errorPie') errorPieChart = chart;
+      else if (key === 'latHist') latencyHistChart = chart;
+      else if (key === 'throughput') throughputChart = chart;
+    }
+
+    function renderEndpointTable(rows) {
+      const tbody = document.querySelector('#endpointTable tbody');
+      if (!rows || !rows.length) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--muted);">No endpoint stats available</td></tr>'; return; }
+      tbody.innerHTML = rows.map(r => `
+        <tr>
+          <td>${r.label}</td>
+          <td>${formatNumber(r.count, 0)}</td>
+          <td>${formatNumber(r.error_count, 0)}</td>
+          <td>${formatNumber(r.average)}</td>
+          <td>${formatNumber(r.p50)}</td>
+          <td>${formatNumber(r.p90)}</td>
+          <td>${formatNumber(r.p95)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderCharts(charts, analysis) {
+      const colors = getThemeColors();
+
+      const lot = charts.latency_over_time || [];
+      const labels = lot.map(p => new Date(Number(p.timestamp)).toLocaleTimeString());
+      const data = lot.map(p => p.latency_ms);
+      ensureChart('latency', 'latencyChart', () => ({
+        type: 'line',
+        data: { labels, datasets: [{ label: 'Latency (ms)', data, borderColor: colors.accent, backgroundColor: colors.accentBg, tension: 0.25, fill: true, pointRadius: 0 }]},
+        options: { responsive: true, scales: { x: { ticks: { color: colors.muted } }, y: { ticks: { color: colors.muted } } }, plugins: { legend: { labels: { color: colors.text } } } }
+      }));
+
+      const top10 = charts.top10_slowest || [];
+      const x = top10.map(r => r.mean);
+      const y = top10.map(r => r.label);
+      ensureChart('top10', 'top10Chart', () => ({
+        type: 'bar',
+        data: { labels: y, datasets: [{ label: 'Avg Latency (ms)', data: x, backgroundColor: colors.accent2 }]},
+        options: { indexAxis: 'y', responsive: true, scales: { x: { ticks: { color: colors.muted } }, y: { ticks: { color: colors.muted } } }, plugins: { legend: { labels: { color: colors.text } } } }
+      }));
+
+      const errDist = charts.error_distribution || [];
+      ensureChart('errorPie', 'errorPieChart', () => ({
+        type: 'pie',
+        data: {
+          labels: errDist.map(r => r.label),
+          datasets: [{ data: errDist.map(r => r.error_count), backgroundColor: ['#ef4444','#f97316','#f59e0b','#22c55e','#3b82f6','#8b5cf6','#ec4899','#14b8a6','#84cc16','#eab308'] }]
+        },
+        options: { plugins: { legend: { labels: { color: colors.text } } } }
+      }));
+
+      const hist = charts.latency_histogram || [];
+      ensureChart('latHist', 'latencyHistChart', () => ({
+        type: 'bar',
+        data: { labels: hist.map(b => b.bucket), datasets: [{ label: 'Count', data: hist.map(b => b.count), backgroundColor: colors.accent }]},
+        options: { scales: { x: { ticks: { color: colors.muted, maxRotation: 45, minRotation: 45 } }, y: { ticks: { color: colors.muted } } }, plugins: { legend: { labels: { color: colors.text } } } }
+      }));
+
+      const thr = charts.throughput_over_time || [];
+      ensureChart('throughput', 'throughputChart', () => ({
+        type: 'line',
+        data: { labels: thr.map(p => new Date(Number(p.timestamp)).toLocaleTimeString()), datasets: [{ label: 'Requests / sec', data: thr.map(p => p.rps), borderColor: colors.success, backgroundColor: colors.successBg, tension: 0.25, fill: true, pointRadius: 0 }]},
+        options: { responsive: true, scales: { x: { ticks: { color: colors.muted } }, y: { ticks: { color: colors.muted } } }, plugins: { legend: { labels: { color: colors.text } } } }
+      }));
+
+      renderEndpointTable((analysis && analysis.latency_by_label) || []);
+    }
+
+    async function uploadTo(endpoint) {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) throw new Error('Please choose a file first');
+      const form = new FormData();
+      form.append('file', file, file.name);
+      const res = await fetch(`${apiBase}${endpoint}`, { method: 'POST', body: form });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`Request failed (${res.status}): ${txt}`);
+      }
+      return res;
+    }
+
+    btnAnalyze.addEventListener('click', async () => {
+      try {
+        setStatus('Analyzing...');
+        btnAnalyze.disabled = true; btnDownload.disabled = true;
+        const res = await uploadTo('/api/analyze');
+        const payload = await res.json();
+        lastPayload = payload;
+        renderMetrics(payload.metrics || {});
+        renderCharts(payload.charts || {}, payload.analysis || {});
+        setStatus(`Detected tool: ${payload.tool}`);
+        lastUploadedFile = fileInput.files[0] || null;
+        btnDownload.disabled = !lastPayload;
+      } catch (err) {
+        console.error(err);
+        setStatus(err.message || String(err), true);
+      } finally {
+        btnAnalyze.disabled = false;
+      }
+    });
+
+    btnDownload.addEventListener('click', async () => {
+      try {
+        if (!lastPayload) throw new Error('Analyze a file before downloading report');
+        setStatus('Preparing PDF report...');
+        const chartsToGrab = {
+          latency_over_time: document.getElementById('latencyChart'),
+          top10_slowest: document.getElementById('top10Chart'),
+          error_distribution: document.getElementById('errorPieChart'),
+          latency_histogram: document.getElementById('latencyHistChart'),
+          throughput_over_time: document.getElementById('throughputChart')
+        };
+        const chartImages = Object.fromEntries(
+          Object.entries(chartsToGrab).map(([k, el]) => [k, el ? el.toDataURL('image/png') : ''])
+        );
+        const body = JSON.stringify({ tool: lastPayload.tool, metrics: lastPayload.metrics, charts: lastPayload.charts, analysis: lastPayload.analysis, chartImages });
+        const res = await fetch(`${apiBase}/api/download-report`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(`Report failed (${res.status}): ${txt}`);
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'performance_report.pdf';
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+        setStatus('PDF report downloaded.');
+      } catch (err) {
+        console.error(err);
+        setStatus(err.message || String(err), true);
+      }
+    });
+
+    // Initialize theme on first load
+    initTheme();
+  </script>
+</body>
+</html> 

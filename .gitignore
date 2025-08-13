@@ -1,0 +1,52 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+.env
+
+# Distribution / packaging
+.Python
+build/
+dist/
+.eggs/
+*.egg-info/
+
+# Unit test / coverage reports
+.pytest_cache/
+.coverage
+.tox/
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Type checkers / linters
+.mypy_cache/
+.pyre/
+.pytype/
+.ruff_cache/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local data
+*.sqlite3
+
+# Node (if any frontend tooling is added later)
+node_modules/
+
+# Azure/Build artifacts
+oryx-manifest.toml 

@@ -1,0 +1,63 @@
+{
+  "metrics": {
+    "http_req_duration": {
+      "type": "trend",
+      "values": {
+        "avg": 500.5,
+        "min": 150,
+        "med": 450.5,
+        "max": 1800,
+        "p(90)": 900,
+        "p(95)": 1500
+      }
+    },
+    "http_reqs": {
+      "type": "counter",
+      "values": {
+        "count": 12,
+        "rate": 1.2
+      }
+    },
+    "http_req_failed": {
+      "type": "rate",
+      "values": {
+        "rate": 0.1666,
+        "count": 2
+      }
+    },
+    "data_received": {
+      "type": "counter",
+      "values": {
+        "count": 4864,
+        "rate": 486.4
+      }
+    },
+    "data_sent": {
+      "type": "counter",
+      "values": {
+        "count": 1200,
+        "rate": 120
+      }
+    }
+  },
+  "root_group": {
+    "name": "",
+    "path": "",
+    "id": "d41d8cd98f00b204e9800998ecf8427e",
+    "groups": [],
+    "checks": [
+      {
+        "name": "is status 200",
+        "path": "::is status 200",
+        "id": "a901034f",
+        "passes": 10,
+        "fails": 2
+      }
+    ]
+  },
+  "state": {
+    "isStdOutTTY": true,
+    "isStdErrTTY": true,
+    "testRunDurationMs": 10000
+  }
+}
